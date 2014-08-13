@@ -24,7 +24,7 @@ def checkRSS(entry):
 
                     #Send the Yo
                     client = httpclient.HTTPClient()
-                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+entry['url'])
+                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'])
                     resp = client.fetch(req)
 
                     #print(resp)
@@ -50,7 +50,7 @@ def checkRSS(entry):
 
                     #Send the Yo
                     client = httpclient.HTTPClientHTTPClient()
-                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+entry['url'])
+                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'])
 
                     mysql.execute("UPDATE feeds SET datetime=%s, lastid=%s WHERE id=%s", "", id, entry['id'])
         except Exception:
