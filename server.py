@@ -84,7 +84,7 @@ def crawlRSS():
     res = mysql.query("SELECT * FROM feeds")
 
     for entry in res:
-        print(entry['url'])
+        #print(entry['url'])
         try:
             _workers.apply_async(checkRSS, (entry, ))
             #checkRSS(entry)
@@ -93,7 +93,7 @@ def crawlRSS():
             pass
 
     print "done"
-    yield gen.Task(ioloop.IOLoop.instance().add_timeout, time.time() + 30)
+    yield gen.Task(ioloop.IOLoop.instance().add_timeout, time.time() + 300)
 
     #time.sleep(30)
 
