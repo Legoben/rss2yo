@@ -18,7 +18,7 @@ def checkRSS(entry):
     #def parseRSS(resp):
         try:
             client = httpclient.HTTPClient()
-            req = httpclient.HTTPRequest(entry['url'], connect_timeout=3, request_timeout=3)
+            req = httpclient.HTTPRequest(entry['url'], connect_timeout=5, request_timeout=3, user_agent="rssyo.com")
             resp = client.fetch(req)
 
             feed = feedparser.parse(resp.body)
@@ -34,8 +34,12 @@ def checkRSS(entry):
 
                     #Send the Yo
                     client = httpclient.HTTPClient()
-                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'])
-                    resp = client.fetch(req)
+                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'], user_agent="rssyo.com")
+                    try:
+                        resp = client.fetch(req)
+                    except Exception:
+                        print(req.body)
+                        return
 
                     if 'id' in feed['items'][0]:
                         id = feed['items'][0]['id']
@@ -44,7 +48,10 @@ def checkRSS(entry):
 
                     date = feed['items'][0]['published']
 
+                    print(date, id, entry['id'])
                     mysql.execute("UPDATE feeds SET datetime=%s, lastid=%s WHERE id=%s", date, id, entry['id'])
+
+                    print("yo")
             else:
                 if 'id' in feed['items'][0]:
                     id = feed['items'][0]['id']
@@ -58,7 +65,7 @@ def checkRSS(entry):
 
                     #Send the Yo
                     client = httpclient.HTTPClient()
-                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'])
+                    req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'], user_agent="rssyo.com")
 
                     mysql.execute("UPDATE feeds SET datetime=%s, lastid=%s WHERE id=%s", "", id, entry['id'])
         except Exception as e:
@@ -80,7 +87,7 @@ def crawlRSS():
         print(entry['url'])
         try:
             _workers.apply_async(checkRSS, (entry, ))
-            # checkRSS(entry)
+            #checkRSS(entry)
         except Exception as e:
             print(e)
             pass
