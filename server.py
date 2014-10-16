@@ -5,7 +5,9 @@ import sys
 import time
 import datetime
 import dateutil.parser as parser #install
+from multiprocessing.pool import ThreadPool
 
+_workers = ThreadPool(30)
 
 
 print "restarted"
@@ -17,6 +19,10 @@ def checkRSS(entry):
         try:
             feed = feedparser.parse(resp.body)
 
+            if len(feed['items']) == 0:
+                #print("no items")
+                return
+
             if entry['datetime'] != '':
 
                 if parser.parse(entry['datetime']) < parser.parse(feed['items'][0]['published']):
@@ -26,10 +32,6 @@ def checkRSS(entry):
                     client = httpclient.HTTPClient()
                     req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'])
                     resp = client.fetch(req)
-
-                    #print(resp)
-
-
 
                     if 'id' in feed['items'][0]:
                         id = feed['items'][0]['id']
@@ -44,18 +46,19 @@ def checkRSS(entry):
                     id = feed['items'][0]['id']
                 elif 'title' in feed['items'][0]:
                     id = feed['items'][0]['title']
+                else:
+                    return
 
                 if entry['lastid'] != id:
                     print("new")
 
                     #Send the Yo
-                    client = httpclient.HTTPClientHTTPClient()
+                    client = httpclient.HTTPClient()
                     req = httpclient.HTTPRequest("http://api.justyo.co/yoall/", method='POST', body="api_token="+entry['apikey']+"&link="+feed['items'][0]['link'])
 
                     mysql.execute("UPDATE feeds SET datetime=%s, lastid=%s WHERE id=%s", "", id, entry['id'])
-        except Exception:
+        except Exception as e:
             pass
-
 
     try:
         client = httpclient.AsyncHTTPClient()
@@ -66,12 +69,15 @@ def checkRSS(entry):
 
 
 
-@gen.engine
+
+
+
 def crawlRSS():
-    print("here")
     res = mysql.query("SELECT * FROM feeds")
 
+
     for entry in res:
+        #print(entry['url'])
         try:
             checkRSS(entry)
         except Exception as e:
@@ -79,7 +85,10 @@ def crawlRSS():
             pass
 
     print "waiting"
-    yield gen.Task(ioloop.IOLoop.instance().add_timeout, time.time() + 30)
+    #yield gen.Task(ioloop.IOLoop.instance().add_timeout, time.time() + 30)
+
+    time.sleep(30)
+
     crawlRSS()
 
 
@@ -194,8 +203,9 @@ app = web.Application([
 ], debug=True)
 
 if __name__ == '__main__':
-    app.listen(9001)
-    crawlRSS()
+    app.listen(80)
+    #crawlRSS()
+    _workers.apply_async(crawlRSS)
     ioloop.IOLoop.instance().start()
 
 
