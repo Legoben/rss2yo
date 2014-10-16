@@ -7,7 +7,7 @@ import datetime
 import dateutil.parser as parser #install
 from multiprocessing.pool import ThreadPool
 
-_workers = ThreadPool(30)
+_workers = ThreadPool(15)
 
 
 print "restarted"
@@ -15,8 +15,12 @@ print "restarted"
 def checkRSS(entry):
     #print entry
 
-    def parseRSS(resp):
+    #def parseRSS(resp):
         try:
+            client = httpclient.HTTPClient()
+            req = httpclient.HTTPRequest(entry['url'], connect_timeout=3, request_timeout=3)
+            resp = client.fetch(req)
+
             feed = feedparser.parse(resp.body)
 
             if len(feed['items']) == 0:
@@ -58,13 +62,9 @@ def checkRSS(entry):
 
                     mysql.execute("UPDATE feeds SET datetime=%s, lastid=%s WHERE id=%s", "", id, entry['id'])
         except Exception as e:
+            print(e, entry['url'])
             pass
 
-    try:
-        client = httpclient.AsyncHTTPClient()
-        client.fetch(entry['url'], parseRSS)
-    except Exception:
-        pass
 
 
 
@@ -72,22 +72,23 @@ def checkRSS(entry):
 
 
 
+@gen.engine
 def crawlRSS():
     res = mysql.query("SELECT * FROM feeds")
 
-
     for entry in res:
-        #print(entry['url'])
+        print(entry['url'])
         try:
-            checkRSS(entry)
+            _workers.apply_async(checkRSS, (entry, ))
+            # checkRSS(entry)
         except Exception as e:
             print(e)
             pass
 
-    print "waiting"
-    #yield gen.Task(ioloop.IOLoop.instance().add_timeout, time.time() + 30)
+    print "done"
+    yield gen.Task(ioloop.IOLoop.instance().add_timeout, time.time() + 30)
 
-    time.sleep(30)
+    #time.sleep(30)
 
     crawlRSS()
 
@@ -204,8 +205,8 @@ app = web.Application([
 
 if __name__ == '__main__':
     app.listen(80)
-    #crawlRSS()
-    _workers.apply_async(crawlRSS)
+    crawlRSS()
+    #_workers.apply_async(crawlRSS)
     ioloop.IOLoop.instance().start()
 
 
